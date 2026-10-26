@@ -1,0 +1,17 @@
+# Credenciales reales de las apps — NUNCA subir (usa config.example.js como plantilla)
+src/config.js
+
+# Claves / secretos
+*.pem
+*.key
+.extension-key*
+
+# Sistema operativo / editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Dependencias (por si en el futuro agregas build)
+node_modules/
+dist/

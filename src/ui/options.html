@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>AniHub · Options</title>
+</head>
+<body>
+  <div class="page">
+    <h1>AniHub · Options</h1>
+
+    <div class="panel">
+      <h2>Connect accounts</h2>
+      <p class="muted">Sign in with your MyAnimeList and AniList accounts.
+        A login window opens; if you're already signed in on the site, just authorize.</p>
+      <table>
+        <tr>
+          <td><span class="pill off" id="pill-ani"></span> <b>AniList</b></td>
+          <td class="muted" id="st-ani">—</td>
+          <td class="row" style="justify-content:flex-end;">
+            <button id="login-ani">Connect</button>
+            <button id="logout-ani">Disconnect</button>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="pill off" id="pill-mal"></span> <b>MyAnimeList</b></td>
+          <td class="muted" id="st-mal">—</td>
+          <td class="row" style="justify-content:flex-end;">
+            <button id="login-mal">Connect</button>
+            <button id="logout-mal">Disconnect</button>
+          </td>
+        </tr>
+      </table>
+      <p class="muted" id="auth-msg" style="margin-top:10px;"></p>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+  <script type="module" src="options.js"></script>
+</body>
+</html>

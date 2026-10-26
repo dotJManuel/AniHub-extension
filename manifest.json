@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "AniHub — MAL + AniList Tracker",
+  "version": "0.1.0",
+  "description": "Autentica en MyAnimeList y AniList, ve tu lista actual en un solo lugar y sincroniza tu progreso en ambos a la vez.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwCrLtLmjWdBOj17VWiNRaHDZI4/aRMjZPXqggyTEDqcf1aND8b2u0+bQYbT9KN4YkxdkEwMk4v/bBSv0gnx58HH0FUpKGRhjlYIB3pbvvh0hgXfjF0FdO43p+d/PuwJlTmLE7HE3GhQN0wGrp9c6wJ6bUbATSzLlX80RILInpozXMqXFkPG8bE+RWJDmTxzo6cXaQe1TJKxJFr7HdczIDQvWhAM8l+D9nVQabV/ecZKgjrSA1fJZrZOr5o9xvqtSMvU8s52diveN81R0D+nQbW45h2MnuIk2tBZFfyVSknrL0nRpfdXU1qCXJZV9gKiT4whrsyKbhVXukunFuU11swIDAQAB",
+  "action": {
+    "default_popup": "src/ui/popup.html",
+    "default_title": "AniHub"
+  },
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "options_ui": {
+    "page": "src/ui/options.html",
+    "open_in_tab": true
+  },
+  "permissions": [
+    "storage",
+    "identity",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://api.myanimelist.net/*",
+    "https://myanimelist.net/*",
+    "https://graphql.anilist.co/*",
+    "https://api.jikan.moe/*"
+  ]
+}
