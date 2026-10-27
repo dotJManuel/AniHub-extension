@@ -25,6 +25,7 @@
     "https://api.myanimelist.net/*",
     "https://myanimelist.net/*",
     "https://graphql.anilist.co/*",
-    "https://api.jikan.moe/*"
+    "https://api.jikan.moe/*",
+    "https://*.workers.dev/*"
   ]
 }

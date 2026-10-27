@@ -1,0 +1,10 @@
+name = "anihub-oauth"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+# Client ID de MAL (público). Es el mismo que pones en src/config.js.
+[vars]
+MAL_CLIENT_ID = "62939835cf0c4df33547c650be3df130"
+
+# El Client Secret NO va aquí. Se guarda cifrado con:
+#   wrangler secret put MAL_CLIENT_SECRET

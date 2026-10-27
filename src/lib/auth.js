@@ -20,9 +20,20 @@ export async function getClientIds() {
     anilist: s.anilistClientId || DEFAULT_CLIENT_IDS.anilist,
     mal: s.malClientId || DEFAULT_CLIENT_IDS.mal,
     // MAL emite un Client Secret para todos los tipos de app y su endpoint de
-    // token lo exige (incluso con PKCE). Viene embebido por defecto (config.js).
+    // token lo exige (incluso con PKCE). Dos modos:
+    //  - Con proxy (malWorker): el secret vive en el Worker; aquí NO se embebe.
+    //  - Directo (malSecret): el secret va en la build (solo dev / sin publicar).
     malSecret: s.malClientSecret || DEFAULT_CLIENT_IDS.malSecret || '',
+    malWorker: (s.malWorker || DEFAULT_CLIENT_IDS.malWorker || '').replace(/\/+$/, ''),
   };
+}
+
+// Codifica el `state` del flujo con proxy en base64url (JSON seguro para URL).
+function encodeState(obj) {
+  return btoa(JSON.stringify(obj))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
 }
 
 function randomString(length = 64) {
@@ -67,21 +78,50 @@ export async function loginAnilist() {
 // --- MyAnimeList (PKCE plain) --------------------------------------------
 
 export async function loginMal() {
-  const { mal: clientId, malSecret } = await getClientIds();
-  if (!clientId) throw new Error('Falta el Client ID de MyAnimeList (configúralo en Opciones).');
+  const { mal: clientId, malSecret, malWorker } = await getClientIds();
+  if (!clientId) throw new Error('Falta el Client ID de MyAnimeList (configúralo en config.js).');
 
-  const redirect = redirectUri();
   const verifier = randomString(96); // PKCE plain: challenge === verifier
-  const state = randomString(16);
+  const nonce = randomString(16);
 
+  // --- Modo proxy: el Worker intercambia el code con el secret (server-side) ---
+  if (malWorker) {
+    const finalRedirect = redirectUri();
+    // El redirect_uri registrado en MAL es el del Worker; llevamos a dónde volver
+    // (chromiumapp.org), el verifier y el nonce dentro del `state`.
+    const state = encodeState({ r: finalRedirect, v: verifier, n: nonce });
+    const callback = `${malWorker}/mal/callback`;
+
+    const url =
+      `${MAL.authorize}?response_type=code&client_id=${encodeURIComponent(clientId)}` +
+      `&code_challenge=${verifier}&code_challenge_method=plain` +
+      `&state=${encodeURIComponent(state)}&redirect_uri=${encodeURIComponent(callback)}`;
+
+    const responseUrl = await launch(url);
+    const frag = new URLSearchParams(responseUrl.split('#')[1] || '');
+    if (frag.get('state') !== nonce) throw new Error('State de OAuth no coincide (posible CSRF).');
+    if (frag.get('error')) throw new Error(`MyAnimeList: ${frag.get('error')}`);
+    const access_token = frag.get('access_token');
+    if (!access_token) throw new Error('MyAnimeList no devolvió un token.');
+
+    await storage.setMalTokens({
+      access_token,
+      refresh_token: frag.get('refresh_token') || '',
+      expires_in: frag.get('expires_in'),
+    });
+    return true;
+  }
+
+  // --- Modo directo: el secret se usa aquí (queda en la build) ---
+  const redirect = redirectUri();
   const url =
     `${MAL.authorize}?response_type=code&client_id=${encodeURIComponent(clientId)}` +
     `&code_challenge=${verifier}&code_challenge_method=plain` +
-    `&state=${state}&redirect_uri=${encodeURIComponent(redirect)}`;
+    `&state=${nonce}&redirect_uri=${encodeURIComponent(redirect)}`;
 
   const responseUrl = await launch(url);
   const query = new URLSearchParams((responseUrl.split('?')[1] || '').split('#')[0]);
-  if (query.get('state') !== state) throw new Error('State de OAuth no coincide (posible CSRF).');
+  if (query.get('state') !== nonce) throw new Error('State de OAuth no coincide (posible CSRF).');
   const code = query.get('code');
   if (!code) throw new Error('MyAnimeList no devolvió un code.');
 
@@ -108,21 +148,32 @@ export async function loginMal() {
 export async function refreshMal() {
   const { malRefresh } = await storage.get('malRefresh');
   if (!malRefresh) return false;
-  const { mal: clientId, malSecret } = await getClientIds();
+  const { mal: clientId, malSecret, malWorker } = await getClientIds();
 
-  const body = new URLSearchParams({
-    client_id: clientId,
-    grant_type: 'refresh_token',
-    refresh_token: malRefresh,
-  });
-  if (malSecret) body.set('client_secret', malSecret);
+  let json;
+  if (malWorker) {
+    // El Worker vuelve a usar el secret para renovar.
+    const res = await fetch(`${malWorker}/mal/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: malRefresh }),
+    });
+    json = await res.json();
+  } else {
+    const body = new URLSearchParams({
+      client_id: clientId,
+      grant_type: 'refresh_token',
+      refresh_token: malRefresh,
+    });
+    if (malSecret) body.set('client_secret', malSecret);
+    const res = await fetch(MAL.token, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    });
+    json = await res.json();
+  }
 
-  const res = await fetch(MAL.token, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: body.toString(),
-  });
-  const json = await res.json();
   if (!json.access_token) {
     await storage.clearProvider('mal');
     return false;

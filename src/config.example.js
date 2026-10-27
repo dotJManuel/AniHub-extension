@@ -23,10 +23,18 @@ export const MAL = {
 };
 
 // Credenciales de las apps (las pone el desarrollador, NO el usuario final).
+//
+// Para MAL hay dos modos (elige uno):
+//  A) PUBLICAR (recomendado): despliega el Worker de `worker/` y pon su URL en
+//     `malWorker`; deja `malSecret` vacío. El secret vive en el Worker y NO
+//     viaja en la extensión.
+//  B) DEV local: deja `malWorker` vacío y pon `malSecret`. El secret quedará
+//     embebido en la build (no publiques así).
 export const DEFAULT_CLIENT_IDS = {
   anilist: '', // AniList Client ID (público, numérico)
   mal: '', // MyAnimeList Client ID
-  malSecret: '', // MyAnimeList Client Secret (requerido por MAL para el token)
+  malSecret: '', // MAL Client Secret — solo en modo B (dev local)
+  malWorker: '', // modo A: 'https://anihub-oauth.TU-SUBDOMINIO.workers.dev' (sin barra final)
 };
 
 // Estados canónicos internos (vocabulario neutral).

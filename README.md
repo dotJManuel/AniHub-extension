@@ -71,9 +71,25 @@ https://ndknemiipkmnopdklkgojkdbgnpjpgdj.chromiumapp.org/
 - Copia el **Client ID** (numérico) → `DEFAULT_CLIENT_IDS.anilist`.
 
 **MyAnimeList** — <https://myanimelist.net/apiconfig> → *Create ID*:
-- App Type: `web`. App Redirect URL: el de arriba. Homepage URL: cualquiera válida.
-- Copia el **Client ID** → `DEFAULT_CLIENT_IDS.mal` y el **Client Secret** →
-  `DEFAULT_CLIENT_IDS.malSecret`.
+- App Type: `web`. Homepage URL: cualquiera válida.
+- **App Redirect URL**: depende del modo de MAL (ver abajo).
+- Copia el **Client ID** → `DEFAULT_CLIENT_IDS.mal`.
+
+MAL **exige un Client Secret** en el intercambio de token (incluso con PKCE). Hay
+dos formas de manejarlo:
+
+**Modo A — con proxy (recomendado para publicar).** Un Cloudflare Worker hace el
+intercambio y guarda el secret en el servidor, así **nunca viaja en la
+extensión** (igual que `malsync.moe` en MAL-Sync). Pasos en
+[`worker/README.md`](worker/README.md). Resumen:
+- Despliega el Worker; obtienes una URL `https://anihub-oauth.<sub>.workers.dev`.
+- **App Redirect URL** en MAL = `https://anihub-oauth.<sub>.workers.dev/mal/callback`.
+- En `config.js`: `malWorker: 'https://anihub-oauth.<sub>.workers.dev'` y deja
+  `malSecret` vacío.
+
+**Modo B — directo (solo desarrollo local).** El secret va embebido en la build.
+- **App Redirect URL** en MAL = el Redirect URL de la extensión (el de arriba).
+- En `config.js`: `malSecret: '<tu secret>'` y deja `malWorker` vacío.
 
 ### 3. Carga la extensión y distribúyela
 
@@ -81,10 +97,9 @@ Una vez con `config.js` listo, cárgala sin empaquetar. Como el ID es fijo (por 
 `key`), el mismo Redirect URL sirve en cualquier equipo, así que puedes empaquetar
 y compartir la extensión y los usuarios solo tendrán que pulsar **Connect**.
 
-> **MAL exige el Client Secret** en el intercambio de token (incluso con PKCE).
-> Queda dentro de la build que distribuyes (como en cualquier cliente de MAL sin
-> servidor propio). No lo subas al repo. Si se filtra o se abusa, regéneralo en
-> myanimelist.net/apiconfig.
+> Para una versión pública usa el **Modo A**: el Client Secret no queda dentro de
+> la build. En Modo B el secret es extraíble de la build; si se filtra, regéneralo
+> en myanimelist.net/apiconfig. Nunca subas `config.js` al repo en ningún caso.
 
 ---
 
@@ -100,6 +115,7 @@ y compartir la extensión y los usuarios solo tendrán que pulsar **Connect**.
 │  ├─ lib/                  # auth, storage, model, service
 │  ├─ providers/            # anilist.js (GraphQL) y mal.js (REST + Jikan)
 │  └─ ui/                   # popup y options (HTML/JS/CSS)
+├─ worker/                  # proxy OAuth de MAL (Cloudflare Worker, opcional)
 └─ README.md
 ```
 
@@ -112,7 +128,10 @@ y compartir la extensión y los usuarios solo tendrán que pulsar **Connect**.
 - **MyAnimeList**: OAuth2 authorization code + PKCE + API v2
   (`api.myanimelist.net`). Personajes/streaming/externos se obtienen de **Jikan**
   (`api.jikan.moe`) porque la API oficial de MAL no los expone.
-- Tokens en `chrome.storage.local`. No hay backend propio.
+- **Proxy de MAL** (opcional, `worker/`): Cloudflare Worker que hace el
+  intercambio/refresh de token con el Client Secret del lado del servidor. La
+  extensión lo usa si `malWorker` está definido; si no, va directo con `malSecret`.
+- Tokens en `chrome.storage.local`.
 
 ## Seguridad
 
